@@ -1,0 +1,17 @@
+package idris_arm_backend
+version = 0.1.0
+
+sourcedir = "src"
+
+depends = idris2, network
+
+modules =
+  Backend.ARMv7.IR,
+  Backend.ARMv7.Lower,
+  Backend.ARMv7.Emit,
+  Backend.ARMv7.Codegen,
+  Backend.ARMv7.Main,
+  RendererPrimitives
+
+main = Backend.ARMv7.Main
+executable = idris2-armv7

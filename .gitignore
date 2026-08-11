@@ -1,0 +1,5 @@
+build/
+native-build/
+/generated/*.o
+/generated/*.so
+/generated/*.tmp
