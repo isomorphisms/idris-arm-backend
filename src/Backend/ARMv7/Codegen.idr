@@ -29,12 +29,12 @@ record ExportABI where
   result_representation : Representation
 
 private
-renderer_type_name : String -> Name
+renderer_type_name : String → Name
 renderer_type_name leaf =
   NS (mkNamespace "RendererPrimitives") (UN (Basic leaf))
 
 private
-classify_abi_type : Term variables -> Either String Representation
+classify_abi_type : Term variables → Either String Representation
 classify_abi_type (PrimVal _ (PrT Int32Type)) = Right Word32
 classify_abi_type (PrimVal _ (PrT primitive_type)) =
   Left ("unsupported source primitive type `" ++ show primitive_type ++ "`")
@@ -48,7 +48,7 @@ classify_abi_type type = Left "unsupported source type"
 
 private
 parse_source_signature :
-  Term variables ->
+  Term variables →
   Either String (List Representation, Representation)
 parse_source_signature
   (Bind _ argument_name (Pi _ multiplicity Explicit argument_type) scope) = do
@@ -72,23 +72,23 @@ parse_source_signature result_type = do
 
 private
 resolve_export_abi :
-  {auto c : Ref Ctxt Defs} ->
-  (Name, String) ->
+  {auto c : Ref Ctxt Defs} →
+  (Name, String) →
   Core ExportABI
 resolve_export_abi (internal_name, external_symbol) = do
   definitions <- get Ctxt
   source_type <-
     case !(lookupTyExact internal_name (gamma definitions)) of
-      Nothing =>
+      Nothing ⇒
         throw
           (UserError
             ("Could not find the source type of exported function `" ++
              show internal_name ++ "`"))
-      Just found => pure found
+      Just found ⇒ pure found
   normalised_type <- normalise definitions Env.empty source_type
   full_type <- toFullNames normalised_type
   case parse_source_signature full_type of
-    Left explanation =>
+    Left explanation ⇒
       throw
         (UserError
           ("android-armv7 rejected source ABI for `" ++
@@ -96,7 +96,7 @@ resolve_export_abi (internal_name, external_symbol) = do
            ". Supported arguments are RendererPrimitives.Float32, " ++
            "RendererPrimitives.Float32Buffer, and Int32; the result must " ++
            "be RendererPrimitives.Float32."))
-    Right (arguments, result) =>
+    Right (arguments, result) ⇒
       if result /= Float32
         then
           throw
@@ -109,14 +109,14 @@ resolve_export_abi (internal_name, external_symbol) = do
           pure (MkExportABI internal_name external_symbol arguments result)
 
 private
-comment_each_line : String -> String
+comment_each_line : String → String
 comment_each_line source =
-  fastConcat (map (\line => "@   " ++ line ++ "\n") (lines source))
+  fastConcat (map (\line ⇒ "@   " ++ line ++ "\n") (lines source))
 
 private
 lookup_anf_definition :
-  Name ->
-  List (Name, ANFDef) ->
+  Name →
+  List (Name, ANFDef) →
   Maybe ANFDef
 lookup_anf_definition requested [] = Nothing
 lookup_anf_definition requested ((name, definition) :: rest) =
@@ -125,7 +125,7 @@ lookup_anf_definition requested ((name, definition) :: rest) =
     else lookup_anf_definition requested rest
 
 private
-find_duplicate : List String -> Maybe String
+find_duplicate : List String → Maybe String
 find_duplicate [] = Nothing
 find_duplicate (symbol :: rest) =
   if elem symbol rest
@@ -133,27 +133,27 @@ find_duplicate (symbol :: rest) =
     else find_duplicate rest
 
 private
-validate_exports : List ExportABI -> Either String ()
+validate_exports : List ExportABI → Either String ()
 validate_exports [] =
   Left
     ("No functions were selected. Add " ++
      "%export \"android-armv7:<c_symbol>\" to a numerical leaf.")
 validate_exports exports =
   case find_duplicate (map external_symbol exports) of
-    Nothing => Right ()
-    Just duplicate =>
+    Nothing ⇒ Right ()
+    Just duplicate ⇒
       Left ("Duplicate exported C symbol `" ++ duplicate ++ "`")
 
 private
-render_selected_export : ExportABI -> String
+render_selected_export : ExportABI → String
 render_selected_export selected =
   "@ " ++ show selected.internal_name ++ " -> " ++
   selected.external_symbol ++ "\n"
 
 private
 lower_exported_functions :
-  List ExportABI ->
-  List (Name, ANFDef) ->
+  List ExportABI →
+  List (Name, ANFDef) →
   Either String String
 lower_exported_functions [] definitions = Right ""
 lower_exported_functions
@@ -161,11 +161,11 @@ lower_exported_functions
   definitions = do
     definition <-
       case lookup_anf_definition selected.internal_name definitions of
-        Nothing =>
+        Nothing ⇒
           Left
             ("No ANF definition was produced for exported function `" ++
              show selected.internal_name ++ "`")
-        Just found => Right found
+        Just found ⇒ Right found
     leaf <-
       lower_leaf
         selected.external_symbol
@@ -185,8 +185,8 @@ lower_exported_functions
 ||| translation unit.
 private
 render_backend_assembly :
-  List ExportABI ->
-  List (Name, ANFDef) ->
+  List ExportABI →
+  List (Name, ANFDef) →
   Either String String
 render_backend_assembly exports definitions = do
   validate_exports exports
@@ -203,8 +203,8 @@ render_backend_assembly exports definitions = do
 
 private
 fully_qualified_export :
-  {auto c : Ref Ctxt Defs} ->
-  (Name, String) ->
+  {auto c : Ref Ctxt Defs} →
+  (Name, String) →
   Core (Name, String)
 fully_qualified_export (internal_name, external_symbol) = do
   qualified_name <- toFullNames internal_name
@@ -212,12 +212,12 @@ fully_qualified_export (internal_name, external_symbol) = do
 
 private
 compile_android_armv7 :
-  Ref Ctxt Defs ->
-  Ref Syn SyntaxInfo ->
-  (temporary_directory : String) ->
-  (output_directory : String) ->
-  ClosedTerm ->
-  (requested_output_name : String) ->
+  Ref Ctxt Defs →
+  Ref Syn SyntaxInfo →
+  (temporary_directory : String) →
+  (output_directory : String) →
+  ClosedTerm →
+  (requested_output_name : String) →
   Core (Maybe String)
 compile_android_armv7 definitions syntax
                       temporary_directory output_directory
@@ -236,22 +236,22 @@ compile_android_armv7 definitions syntax
 
   assembly_source <-
     case render_backend_assembly export_abis (anf resolved_compile_data) of
-      Left explanation =>
+      Left explanation ⇒
         throw
           (UserError
             ("android-armv7 rejected the reachable program: " ++
              explanation))
-      Right source => pure source
+      Right source ⇒ pure source
 
   Core.writeFile assembly_file assembly_source
   pure (Just assembly_file)
 
 private
 execute_android_armv7 :
-  Ref Ctxt Defs ->
-  Ref Syn SyntaxInfo ->
-  (temporary_directory : String) ->
-  ClosedTerm ->
+  Ref Ctxt Defs →
+  Ref Syn SyntaxInfo →
+  (temporary_directory : String) →
+  ClosedTerm →
   Core ()
 execute_android_armv7 definitions syntax temporary_directory term =
   throw

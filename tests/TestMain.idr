@@ -16,17 +16,17 @@ import System.File
 %default covering
 
 private
-renderer_primitive : String -> Name
+renderer_primitive : String → Name
 renderer_primitive leaf =
   NS (mkNamespace "RendererPrimitives") (UN (Basic leaf))
 
 private
-other_primitive : String -> Name
+other_primitive : String → Name
 other_primitive leaf =
   NS (mkNamespace "UnrelatedModule") (UN (Basic leaf))
 
 private
-ext2 : String -> Int -> Int -> ANF
+ext2 : String → Int → Int → ANF
 ext2 primitive left right =
   AExtPrim
     emptyFC
@@ -35,7 +35,7 @@ ext2 primitive left right =
     [ALocal left, ALocal right]
 
 private
-ext1 : String -> Int -> ANF
+ext1 : String → Int → ANF
 ext1 primitive value =
   AExtPrim
     emptyFC
@@ -45,9 +45,9 @@ ext1 primitive value =
 
 private
 lower_float_leaf :
-  String ->
-  List Representation ->
-  ANFDef ->
+  String →
+  List Representation →
+  ANFDef →
   Either String LeafFunction
 lower_float_leaf symbol arguments =
   lower_leaf symbol arguments Float32
@@ -90,11 +90,11 @@ accepted_quadratic_has_typed_ir_and_dense_frame =
          "evaluate_quadratic"
          [Float32Pointer, Float32]
          quadratic_shape of
-    Left _ => False
-    Right leaf =>
+    Left _ ⇒ False
+    Right leaf ⇒
       case emit_leaf leaf of
-        Left _ => False
-        Right assembly =>
+        Left _ ⇒ False
+        Right assembly ⇒
           leaf.frame_bytes == 48 &&
           isInfixOf "Float32Pointer" (render_ir leaf) &&
           isInfixOf "Word32" (render_ir leaf) &&
@@ -109,11 +109,11 @@ accepted_renderer_arithmetic_is_emitted =
          "renderer_arithmetic"
          [Float32, Float32]
          unary_and_binary_shape of
-    Left _ => False
-    Right leaf =>
+    Left _ ⇒ False
+    Right leaf ⇒
       case emit_leaf leaf of
-        Left _ => False
-        Right assembly =>
+        Left _ ⇒ False
+        Right assembly ⇒
           isInfixOf "vsub.f32" assembly &&
           isInfixOf "vneg.f32" assembly &&
           isInfixOf "vabs.f32" assembly &&
@@ -133,16 +133,16 @@ suffix_spoof_is_rejected =
             [ALocal 0, ALocal 1])
   in
     case lower_float_leaf "suffix_spoof" [Float32, Float32] spoof of
-      Left _ => True
-      Right _ => False
+      Left _ ⇒ True
+      Right _ ⇒ False
 
 private
 unbound_local_is_rejected : Bool
 unbound_local_is_rejected =
   let malformed = MkAFun [0] (ext2 "float32_add" 0 99) in
     case lower_float_leaf "unbound" [Float32] malformed of
-      Left _ => True
-      Right _ => False
+      Left _ ⇒ True
+      Right _ ⇒ False
 
 private
 representation_conflict_is_rejected : Bool
@@ -158,8 +158,8 @@ representation_conflict_is_rejected =
            "conflicting_representation"
            [Float32Pointer]
            malformed of
-      Left _ => True
-      Right _ => False
+      Left _ ⇒ True
+      Right _ ⇒ False
 
 private
 duplicate_definition_is_rejected : Bool
@@ -171,32 +171,32 @@ duplicate_definition_is_rejected =
             (AV emptyFC (ALocal 0)))
   in
     case lower_float_leaf "duplicate_definition" [Float32] malformed of
-      Left _ => True
-      Right _ => False
+      Left _ ⇒ True
+      Right _ ⇒ False
 
 private
 typed_unused_argument_is_accepted : Bool
 typed_unused_argument_is_accepted =
   let identity = MkAFun [0, 1] (AV emptyFC (ALocal 0)) in
     case lower_float_leaf "typed_unused" [Float32, Word32] identity of
-      Left _ => False
-      Right _ => True
+      Left _ ⇒ False
+      Right _ ⇒ True
 
 private
 source_anf_arity_mismatch_is_rejected : Bool
 source_anf_arity_mismatch_is_rejected =
   let identity = MkAFun [0, 1] (AV emptyFC (ALocal 0)) in
     case lower_float_leaf "arity_mismatch" [Float32] identity of
-      Left _ => True
-      Right _ => False
+      Left _ ⇒ True
+      Right _ ⇒ False
 
 private
 non_float_result_abi_is_rejected : Bool
 non_float_result_abi_is_rejected =
   let identity = MkAFun [0] (AV emptyFC (ALocal 0)) in
     case lower_leaf "word_result" [Word32] Word32 identity of
-      Left _ => True
-      Right _ => False
+      Left _ ⇒ True
+      Right _ ⇒ False
 
 private
 invalid_symbols_are_rejected : Bool
@@ -205,8 +205,8 @@ invalid_symbols_are_rejected =
        , validate_external_symbol "bad;directive"
        , validate_external_symbol "lambda_λ"
        ) of
-    (Left _, Left _, Left _) => True
-    _ => False
+    (Left _, Left _, Left _) ⇒ True
+    _ ⇒ False
 
 private
 idris_int_literal_is_rejected : Bool
@@ -214,8 +214,8 @@ idris_int_literal_is_rejected =
   let malformed = MkAFun [] (APrimVal emptyFC (I 0))
   in
     case lower_float_leaf "idris_int" [] malformed of
-      Left _ => True
-      Right _ => False
+      Left _ ⇒ True
+      Right _ ⇒ False
 
 private
 word_constants_do_not_need_literal_pools : Bool
@@ -227,11 +227,11 @@ word_constants_do_not_need_literal_pools =
             (ext2 "float32_buffer_load" 0 1))
   in
     case lower_float_leaf "large_constant" [Float32Pointer] shape of
-      Left _ => False
-      Right leaf =>
+      Left _ ⇒ False
+      Right leaf ⇒
         case emit_leaf leaf of
-          Left _ => False
-          Right assembly =>
+          Left _ ⇒ False
+          Right assembly ⇒
             isInfixOf "movw    r0, #22136" assembly &&
             isInfixOf "movt    r0, #4660" assembly &&
             not (isInfixOf "ldr     r0, =" assembly)
@@ -250,8 +250,8 @@ emitter_rejects_invalid_representation_tags =
           8
   in
     case emit_leaf malformed of
-      Left _ => True
-      Right _ => False
+      Left _ ⇒ True
+      Right _ ⇒ False
 
 private
 fifth_argument_is_rejected : Bool
@@ -261,8 +261,8 @@ fifth_argument_is_rejected =
            "five_arguments"
            [Float32, Float32, Float32, Float32, Float32]
            malformed of
-      Left _ => True
-      Right _ => False
+      Left _ ⇒ True
+      Right _ ⇒ False
 
 private
 closure_call_is_rejected : Bool
@@ -271,8 +271,8 @@ closure_call_is_rejected =
         MkAFun [0, 1] (AApp emptyFC Nothing (ALocal 0) (ALocal 1))
   in
     case lower_float_leaf "closure_call" [Float32, Float32] malformed of
-      Left _ => True
-      Right _ => False
+      Left _ ⇒ True
+      Right _ ⇒ False
 
 private
 tests : List (String, Bool)
@@ -299,7 +299,7 @@ tests =
   ]
 
 private
-failed_tests : List (String, Bool) -> List String
+failed_tests : List (String, Bool) → List String
 failed_tests [] = []
 failed_tests ((name, passed) :: rest) =
   if passed
@@ -318,32 +318,32 @@ quadratic_assembly = do
   Right (assembly_header ++ leaf_assembly ++ assembly_footer)
 
 private
-write_quadratic : String -> IO ()
+write_quadratic : String → IO ()
 write_quadratic path =
   case quadratic_assembly of
-    Left explanation => do
+    Left explanation ⇒ do
       putStrLn explanation
       exitFailure
-    Right assembly =>
+    Right assembly ⇒
       case !(writeFile path assembly) of
-        Left error => do
+        Left error ⇒ do
           putStrLn ("Could not write generated assembly: " ++ show error)
           exitFailure
-        Right () => putStrLn ("Wrote " ++ path)
+        Right () ⇒ putStrLn ("Wrote " ++ path)
 
 private
-check_quadratic : String -> IO ()
+check_quadratic : String → IO ()
 check_quadratic path =
   case quadratic_assembly of
-    Left explanation => do
+    Left explanation ⇒ do
       putStrLn explanation
       exitFailure
-    Right expected =>
+    Right expected ⇒
       case !(readFile path) of
-        Left error => do
+        Left error ⇒ do
           putStrLn ("Could not read assembly golden: " ++ show error)
           exitFailure
-        Right actual =>
+        Right actual ⇒
           if actual == expected
             then putStrLn ("Assembly golden matches " ++ path)
             else do
@@ -359,10 +359,10 @@ main = do
     then do
       putStrLn (show (length tests) ++ " ARMv7 backend tests passed.")
       case !getArgs of
-        [program_name, "--update-golden", output_path] =>
+        [program_name, "--update-golden", output_path] ⇒
           write_quadratic output_path
-        [program_name, golden_path] => check_quadratic golden_path
-        _ => pure ()
+        [program_name, golden_path] ⇒ check_quadratic golden_path
+        _ ⇒ pure ()
     else do
       putStrLn ("ARMv7 backend test failures: " ++ show failures)
       exitFailure

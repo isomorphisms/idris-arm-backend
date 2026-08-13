@@ -39,23 +39,23 @@ empty_state : BuildState
 empty_state = MkBuildState [] [] 0 [] []
 
 private
-is_ascii_letter : Char -> Bool
+is_ascii_letter : Char → Bool
 is_ascii_letter character =
   (character >= 'A' && character <= 'Z') ||
   (character >= 'a' && character <= 'z')
 
 private
-is_ascii_digit : Char -> Bool
+is_ascii_digit : Char → Bool
 is_ascii_digit character =
   character >= '0' && character <= '9'
 
 private
-is_symbol_start : Char -> Bool
+is_symbol_start : Char → Bool
 is_symbol_start character =
   is_ascii_letter character || character == '_'
 
 private
-is_symbol_rest : Char -> Bool
+is_symbol_rest : Char → Bool
 is_symbol_rest character =
   is_symbol_start character || is_ascii_digit character
 
@@ -63,17 +63,17 @@ is_symbol_rest character =
 ||| this backend.  In particular, digits and Unicode letters cannot start a
 ||| symbol even if another assembler happens to accept them.
 public export
-validate_external_symbol : String -> Either String String
+validate_external_symbol : String → Either String String
 validate_external_symbol symbol =
   case unpack symbol of
-    [] => Left "An exported ARM symbol cannot be empty"
-    first :: rest =>
+    [] ⇒ Left "An exported ARM symbol cannot be empty"
+    first :: rest ⇒
       if is_symbol_start first && all is_symbol_rest rest
         then Right symbol
         else Left ("Invalid C-compatible ARM symbol `" ++ symbol ++ "`")
 
 private
-renderer_name : String -> Name
+renderer_name : String → Name
 renderer_name leaf =
   NS (mkNamespace "RendererPrimitives") (UN (Basic leaf))
 
@@ -84,7 +84,7 @@ data RendererPrimitive
   | Unary FloatUnaryOperation
 
 private
-renderer_primitive : Name -> Maybe RendererPrimitive
+renderer_primitive : Name → Maybe RendererPrimitive
 renderer_primitive name =
   if name == renderer_name "float32_buffer_load"
     then Just BufferLoad
@@ -105,19 +105,19 @@ renderer_primitive name =
                   else Nothing
 
 private
-add_constraint : RepresentationConstraint -> BuildState -> BuildState
+add_constraint : RepresentationConstraint → BuildState → BuildState
 add_constraint constraint
                (MkBuildState bound slots next instructions constraints) =
   MkBuildState bound slots next instructions (constraint :: constraints)
 
 private
-add_instruction : RawInstruction -> BuildState -> BuildState
+add_instruction : RawInstruction → BuildState → BuildState
 add_instruction instruction
                 (MkBuildState bound slots next instructions constraints) =
   MkBuildState bound slots next (instruction :: instructions) constraints
 
 private
-bind_variable : String -> Int -> BuildState -> Either String BuildState
+bind_variable : String → Int → BuildState → Either String BuildState
 bind_variable role variable
               (MkBuildState bound slots next instructions constraints) =
   if elem variable bound
@@ -140,7 +140,7 @@ bind_variable role variable
             constraints)
 
 private
-require_bound : String -> Int -> BuildState -> Either String ()
+require_bound : String → Int → BuildState → Either String ()
 require_bound role variable state =
   if elem variable state.bound_variables
     then Right ()
@@ -150,9 +150,9 @@ require_bound role variable state =
 
 private
 bind_arguments :
-  List Int ->
-  List Representation ->
-  BuildState ->
+  List Int →
+  List Representation →
+  BuildState →
   Either String BuildState
 bind_arguments [] [] state = Right state
 bind_arguments (argument :: rest) (representation :: representations) state = do
@@ -167,19 +167,19 @@ bind_arguments variables representations state =
      " arguments, but ANF contains " ++ show (length variables))
 
 private
-add_copy : Int -> Int -> BuildState -> BuildState
+add_copy : Int → Int → BuildState → BuildState
 add_copy destination source state =
   add_instruction (RawCopy destination source)
     (add_constraint (SameRepresentation destination source) state)
 
 private
-add_word_constant : Int -> Int -> BuildState -> BuildState
+add_word_constant : Int → Int → BuildState → BuildState
 add_word_constant destination value state =
   add_instruction (RawWordConstant destination value)
     (add_constraint (HasRepresentation destination Word32) state)
 
 private
-add_buffer_load : Int -> Int -> Int -> BuildState -> BuildState
+add_buffer_load : Int → Int → Int → BuildState → BuildState
 add_buffer_load destination buffer index state =
   add_instruction (RawLoadFloat32 destination buffer index)
     (add_constraint (HasRepresentation destination Float32)
@@ -188,11 +188,11 @@ add_buffer_load destination buffer index state =
 
 private
 add_float_binary :
-  FloatBinaryOperation ->
-  Int ->
-  Int ->
-  Int ->
-  BuildState ->
+  FloatBinaryOperation →
+  Int →
+  Int →
+  Int →
+  BuildState →
   BuildState
 add_float_binary operation destination left right state =
   add_instruction (RawFloatBinary operation destination left right)
@@ -202,10 +202,10 @@ add_float_binary operation destination left right state =
 
 private
 add_float_unary :
-  FloatUnaryOperation ->
-  Int ->
-  Int ->
-  BuildState ->
+  FloatUnaryOperation →
+  Int →
+  Int →
+  BuildState →
   BuildState
 add_float_unary operation destination value state =
   add_instruction (RawFloatUnary operation destination value)
@@ -214,54 +214,54 @@ add_float_unary operation destination value state =
 
 private
 lower_external :
-  Int ->
-  Name ->
-  List AVar ->
-  BuildState ->
+  Int →
+  Name →
+  List AVar →
+  BuildState →
   Either String BuildState
 lower_external destination name arguments state =
   case renderer_primitive name of
-    Nothing =>
+    Nothing ⇒
       Left
         ("Unsupported external primitive `" ++ show name ++
          "`; renderer intrinsics are matched by exact fully qualified name")
-    Just BufferLoad =>
+    Just BufferLoad ⇒
       case arguments of
-        [ALocal buffer, ALocal index] => do
+        [ALocal buffer, ALocal index] ⇒ do
           require_bound "Float32 buffer load" buffer state
           require_bound "Float32 buffer index" index state
           with_destination <- bind_variable "Let destination" destination state
           Right (add_buffer_load destination buffer index with_destination)
-        _ =>
+        _ ⇒
           Left
             ("Renderer primitive `" ++ show name ++
              "` requires two local operands, got " ++ show arguments)
-    Just (Binary operation) =>
+    Just (Binary operation) ⇒
       case arguments of
-        [ALocal left, ALocal right] => do
+        [ALocal left, ALocal right] ⇒ do
           require_bound (show operation ++ " left operand") left state
           require_bound (show operation ++ " right operand") right state
           with_destination <- bind_variable "Let destination" destination state
           Right
             (add_float_binary
               operation destination left right with_destination)
-        _ =>
+        _ ⇒
           Left
             ("Renderer primitive `" ++ show name ++
              "` requires two local operands, got " ++ show arguments)
-    Just (Unary operation) =>
+    Just (Unary operation) ⇒
       case arguments of
-        [ALocal value] => do
+        [ALocal value] ⇒ do
           require_bound (show operation ++ " operand") value state
           with_destination <- bind_variable "Let destination" destination state
           Right (add_float_unary operation destination value with_destination)
-        _ =>
+        _ ⇒
           Left
             ("Renderer primitive `" ++ show name ++
              "` requires one local operand, got " ++ show arguments)
 
 private
-lower_value : Int -> ANF -> BuildState -> Either String BuildState
+lower_value : Int → ANF → BuildState → Either String BuildState
 lower_value destination (AV _ (ALocal source)) state = do
   require_bound "Copy" source state
   with_destination <- bind_variable "Let destination" destination state
@@ -284,7 +284,7 @@ lower_value destination expression state =
 ||| let.  Flatten that sequencing while keeping the outer destination out of
 ||| scope until the nested value has been produced.
 private
-lower_assignment : Int -> ANF -> BuildState -> Either String BuildState
+lower_assignment : Int → ANF → BuildState → Either String BuildState
 lower_assignment destination (ALet _ nested_destination nested_value body) state = do
   after_nested <-
     lower_assignment nested_destination nested_value state
@@ -293,14 +293,14 @@ lower_assignment destination value state =
   lower_value destination value state
 
 private
-fresh_variable_from : Int -> List Int -> Int
+fresh_variable_from : Int → List Int → Int
 fresh_variable_from candidate used =
   if elem candidate used
     then fresh_variable_from (candidate + 1) used
     else candidate
 
 private
-collect_tail : ANF -> BuildState -> Either String (BuildState, Int)
+collect_tail : ANF → BuildState → Either String (BuildState, Int)
 collect_tail (ALet _ destination value body) state = do
   after_value <- lower_assignment destination value state
   collect_tail body after_value
@@ -314,8 +314,8 @@ collect_tail expression state = do
 
 private
 relations :
-  Int ->
-  List RepresentationConstraint ->
+  Int →
+  List RepresentationConstraint →
   (List Int, List Representation)
 relations variable [] = ([], [])
 relations variable (HasRepresentation constrained representation :: rest) =
@@ -333,8 +333,8 @@ relations variable (SameRepresentation left right :: rest) =
 
 private
 insert_representation :
-  Representation ->
-  List Representation ->
+  Representation →
+  List Representation →
   List Representation
 insert_representation representation representations =
   if elem representation representations
@@ -343,8 +343,8 @@ insert_representation representation representations =
 
 private
 insert_representations :
-  List Representation ->
-  List Representation ->
+  List Representation →
+  List Representation →
   List Representation
 insert_representations [] accumulated = accumulated
 insert_representations (representation :: rest) accumulated =
@@ -353,10 +353,10 @@ insert_representations (representation :: rest) accumulated =
 
 private
 walk_constraints :
-  List RepresentationConstraint ->
-  List Int ->
-  List Int ->
-  List Representation ->
+  List RepresentationConstraint →
+  List Int →
+  List Int →
+  List Representation →
   List Representation
 walk_constraints constraints [] visited found = found
 walk_constraints constraints (variable :: pending) visited found =
@@ -373,23 +373,23 @@ walk_constraints constraints (variable :: pending) visited found =
 
 private
 infer_representation :
-  List RepresentationConstraint ->
-  Int ->
+  List RepresentationConstraint →
+  Int →
   Either String Representation
 infer_representation constraints variable =
   case walk_constraints constraints [variable] [] [] of
-    [] =>
+    [] ⇒
       Left
         ("No unboxed representation can be inferred for ANF local v" ++
          show variable)
-    [representation] => Right representation
-    representations =>
+    [representation] ⇒ Right representation
+    representations ⇒
       Left
         ("ANF local v" ++ show variable ++
          " has conflicting representations: " ++ show representations)
 
 private
-find_slot : Int -> List (Int, Int) -> Either String Int
+find_slot : Int → List (Int, Int) → Either String Int
 find_slot variable [] =
   Left ("Internal error: no dense frame slot for v" ++ show variable)
 find_slot variable ((candidate, slot) :: rest) =
@@ -399,9 +399,9 @@ find_slot variable ((candidate, slot) :: rest) =
 
 private
 resolve_local :
-  List (Int, Int) ->
-  List RepresentationConstraint ->
-  Int ->
+  List (Int, Int) →
+  List RepresentationConstraint →
+  Int →
   Either String Local
 resolve_local slots constraints variable = do
   slot <- find_slot variable slots
@@ -410,9 +410,9 @@ resolve_local slots constraints variable = do
 
 private
 expect_representation :
-  String ->
-  Representation ->
-  Local ->
+  String →
+  Representation →
+  Local →
   Either String ()
 expect_representation role expected local =
   if local.representation == expected
@@ -424,9 +424,9 @@ expect_representation role expected local =
 
 private
 resolve_instruction :
-  List (Int, Int) ->
-  List RepresentationConstraint ->
-  RawInstruction ->
+  List (Int, Int) →
+  List RepresentationConstraint →
+  RawInstruction →
   Either String Instruction
 resolve_instruction slots constraints (RawCopy destination source) = do
   destination_local <- resolve_local slots constraints destination
@@ -466,9 +466,9 @@ resolve_instruction slots constraints
 
 private
 resolve_instructions :
-  List (Int, Int) ->
-  List RepresentationConstraint ->
-  List RawInstruction ->
+  List (Int, Int) →
+  List RepresentationConstraint →
+  List RawInstruction →
   Either String (List Instruction)
 resolve_instructions slots constraints [] = Right []
 resolve_instructions slots constraints (instruction :: rest) = do
@@ -478,9 +478,9 @@ resolve_instructions slots constraints (instruction :: rest) = do
 
 private
 resolve_locals :
-  List (Int, Int) ->
-  List RepresentationConstraint ->
-  List Int ->
+  List (Int, Int) →
+  List RepresentationConstraint →
+  List Int →
   Either String (List Local)
 resolve_locals slots constraints [] = Right []
 resolve_locals slots constraints (variable :: rest) = do
@@ -489,18 +489,18 @@ resolve_locals slots constraints (variable :: rest) = do
   Right (local :: more)
 
 private
-aligned_frame_bytes : Int -> Int
+aligned_frame_bytes : Int → Int
 aligned_frame_bytes slots =
   let bytes = slots * 4 in
     if bytes `mod` 8 == 0 then bytes else bytes + 4
 
 private
 resolve_function :
-  String ->
-  List Int ->
-  Int ->
-  Representation ->
-  BuildState ->
+  String →
+  List Int →
+  Int →
+  Representation →
+  BuildState →
   Either String LeafFunction
 resolve_function symbol argument_variables result_variable result_representation state = do
   arguments <-
@@ -527,10 +527,10 @@ resolve_function symbol argument_variables result_variable result_representation
 ||| malformed def-use chains are rejected before assembly emission.
 public export
 lower_leaf :
-  String ->
-  List Representation ->
-  Representation ->
-  ANFDef ->
+  String →
+  List Representation →
+  Representation →
+  ANFDef →
   Either String LeafFunction
 lower_leaf requested_symbol argument_representations result_representation
            (MkAFun argument_variables body) = do

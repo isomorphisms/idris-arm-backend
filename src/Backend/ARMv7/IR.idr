@@ -102,13 +102,13 @@ record LeafFunction where
   frame_bytes : Int
 
 public export
-render_ir : LeafFunction -> String
+render_ir : LeafFunction → String
 render_ir function =
   unlines
     ([ "function " ++ function.external_symbol
      , "arguments: " ++ show function.arguments
      ] ++
-     map (\instruction => "  " ++ show instruction) function.instructions ++
+     map (\instruction ⇒ "  " ++ show instruction) function.instructions ++
      [ "return " ++ show function.result
      , "frame-bytes: " ++ show function.frame_bytes
      ])
